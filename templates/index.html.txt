@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fake News Detector</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body {
+      background: url("/static/background.jpg") no-repeat center center fixed;
+      background-size: cover;
+      font-family: 'Segoe UI', sans-serif;
+      color: #fff;
+    }
+
+    body.dark-mode {
+      background-color: #121212;
+      background-image: none;
+      color: #eee;
+    }
+
+    .container {
+      background-color: rgba(255, 255, 255, 0.9);
+      border-radius: 10px;
+      padding: 30px;
+      color: #000;
+      margin-top: 40px;
+    }
+
+    body.dark-mode .container {
+      background-color: rgba(30, 30, 30, 0.95);
+      color: #fff;
+    }
+
+    mark {
+      background-color: yellow;
+      font-weight: bold;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+
+    .icon-result {
+      width: 30px;
+      vertical-align: middle;
+    }
+
+    .spinner-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      display: none;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 150px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="mb-0">🔍 Fake News Detection</h1>
+      <button id="toggleDarkMode" class="btn btn-outline-secondary">Toggle Dark Mode</button>
+    </div>
+
+    <form method="POST" id="newsForm" class="mb-4">
+      <div class="mb-3">
+        <textarea name="news_text" class="form-control" placeholder="Paste or type news here..." required>{% if highlighted_text %}{{ highlighted_text|safe }}{% endif %}</textarea>
+      </div>
+      <div class="text-center">
+        <button type="submit" class="btn btn-success btn-lg px-5">Check</button>
+      </div>
+    </form>
+
+    {% if prediction %}
+    <div class="text-center mb-4">
+      <h2>
+        Prediction:
+        <img src="/static/{{ 'tick.png' if prediction == 'Real News' else 'cross.png' }}" class="icon-result" alt="result icon">
+        <span style="color: {{ 'green' if prediction == 'Real News' else 'red' }};">{{ prediction }}</span>
+      </h2>
+      <h5>Confidence: {{ (confidence * 100) | round(2) }}%</h5>
+    </div>
+    {% endif %}
+
+    {% if history %}
+    <h4 class="mb-3">🕘 Prediction History (Last 10)</h4>
+    <div class="table-responsive">
+      <table class="table table-striped table-bordered align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>News Snippet</th>
+            <th>Prediction</th>
+            <th>Confidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in history|reverse %}
+          <tr>
+            <td>{{ entry.text[:100] }}{% if entry.text|length > 100 %}...{% endif %}</td>
+            <td>
+              <img src="/static/{{ 'tick.png' if entry.prediction == 'Real News' else 'cross.png' }}" class="icon-result" alt="result icon">
+              <span style="color: {{ 'green' if entry.prediction == 'Real News' else 'red' }};">{{ entry.prediction }}</span>
+            </td>
+            <td>{{ (entry.confidence * 100) | round(2) }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="spinner-overlay" id="spinnerOverlay">
+    <div class="spinner-border text-primary" role="status"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const toggleBtn = document.getElementById("toggleDarkMode");
+    const body = document.body;
+    const form = document.getElementById("newsForm");
+    const spinner = document.getElementById("spinnerOverlay");
+
+    function setDarkMode(enabled) {
+      if (enabled) {
+        body.classList.add("dark-mode");
+        toggleBtn.textContent = "Light Mode";
+        localStorage.setItem("darkMode", "true");
+      } else {
+        body.classList.remove("dark-mode");
+        toggleBtn.textContent = "Dark Mode";
+        localStorage.setItem("darkMode", "false");
+      }
+    }
+
+    toggleBtn.addEventListener("click", () => {
+      setDarkMode(!body.classList.contains("dark-mode"));
+    });
+
+    if (localStorage.getItem("darkMode") === "true") {
+      setDarkMode(true);
+    }
+
+    form.addEventListener("submit", () => {
+      spinner.style.display = "flex";
+    });
+  </script>
+</body>
+</html>
