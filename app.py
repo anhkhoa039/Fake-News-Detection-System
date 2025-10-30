@@ -473,7 +473,7 @@ def game():
     if not session.get('visited_home', False):
         return redirect(url_for('home'))
     # Use pandas for robust CSV loading
-    path = "dataset/fake_news_detection(FakeNewsNet)/fnn_dev.csv"
+    path = "dataset/fake_news_detection(FakeNewsNet)/fnn_test.csv"
     df = pd.read_csv(path)
     questions = []
     for _, row in df.iterrows():
