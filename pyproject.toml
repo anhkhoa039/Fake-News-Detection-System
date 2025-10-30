@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fake-news-detection-system"
+version = "0.1.0"
+description = "AI-Powered Fake News Detection System"
+requires-python = "==3.12.*"
+dependencies = [
+    "Flask==3.1.2",
+    "torch>=2.2.0",
+    "transformers==4.57.1",
+    "nltk==3.8.1",
+    "scikit-learn==1.4.2",
+    "pandas==2.2.2",
+    "numpy>=1.26.0",
+    "textblob==0.17.1",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
