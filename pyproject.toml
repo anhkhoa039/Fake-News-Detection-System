@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "fake-news-detection-system"
 version = "0.1.0"
 description = "AI-Powered Fake News Detection System"
-requires-python = "==3.9.*"
+requires-python = ">=3.10"
 dependencies = [
     "Flask==3.1.2",
     "torch==2.7.0",
