@@ -29,7 +29,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: url("{{ url_for('static', filename='background.jpg') }}") center/cover;
+            background: url("{{ url_for('static', filename='bg.jpg') }}") center/cover;
             opacity: 0.1;
             z-index: -1;
         }
@@ -338,11 +338,12 @@
         </div>
 
         <div class="nav-bar">
-            <a href="{{ url_for('home') }}" class="active"><i class="fas fa-home"></i> Home</a>
-            <a href="{{ url_for('history') }}"><i class="fas fa-history"></i> History</a>
-            <a href="{{ url_for('visualization') }}"><i class="fas fa-chart-bar"></i> Analytics</a>
+            <a href="{{ url_for('home') }}" class="{% if request.endpoint == 'home' %}active{% endif %}"><i class="fas fa-home"></i> Home</a>
+            <a href="{{ url_for('history') }}" class="{% if request.endpoint == 'history' %}active{% endif %}"><i class="fas fa-history"></i> History</a>
+            <a href="{{ url_for('visualization') }}" class="{% if request.endpoint == 'visualization' %}active{% endif %}"><i class="fas fa-chart-bar"></i> Analytics</a>
+            <a href="{{ url_for('game') }}" class="{% if request.endpoint == 'game' %}active{% endif %}"><i class="fas fa-gamepad"></i> Game Mode</a>
             {% if session.get('role') == 'admin' %}
-                <a href="{{ url_for('admin') }}"><i class="fas fa-cog"></i> Dashboard</a>
+                <a href="{{ url_for('admin') }}" class="{% if request.endpoint == 'admin' %}active{% endif %}"><i class="fas fa-cog"></i> Dashboard</a>
             {% endif %}
             <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>

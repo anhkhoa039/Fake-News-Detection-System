@@ -9,6 +9,10 @@ from nltk.corpus import stopwords
 import re
 from textblob import TextBlob
 import random
+import random as pyrandom
+import json
+import pandas as pd
+import ast
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key_here"  # Replace with a secure key
@@ -307,6 +311,9 @@ def register_user(username, password):
 def home():
     if "username" not in session:
         return redirect(url_for('login'))
+    if request.method == "GET":
+        session['visited_home'] = True
+        session.modified = True
 
     if "history" not in session:
         session["history"] = []
@@ -458,6 +465,43 @@ def clear_history():
     session["history"] = []
     session.modified = True
     return redirect(url_for("history"))
+
+@app.route("/game")
+def game():
+    if "username" not in session:
+        return redirect(url_for('login'))
+    if not session.get('visited_home', False):
+        return redirect(url_for('home'))
+    # Use pandas for robust CSV loading
+    path = "dataset/fake_news_detection(FakeNewsNet)/fnn_dev.csv"
+    df = pd.read_csv(path)
+    questions = []
+    for _, row in df.iterrows():
+        pcontent = row["paragraph_based_content"]
+        plist = []
+        if pd.notnull(pcontent):
+            if isinstance(pcontent, list):
+                plist = pcontent
+            elif isinstance(pcontent, str):
+                try:
+                    plist = json.loads(pcontent)
+                except Exception:
+                    try:
+                        plist = ast.literal_eval(pcontent)
+                    except Exception:
+                        plist = []
+        label = str(row.get("label_fnn", "real")).lower()
+        is_real = label == "real"
+        if plist and isinstance(plist[0], str) and plist[0].strip():
+            headline = plist[0].strip()
+            if len(headline) > 320:
+                headline = headline[:320].rsplit(" ", 1)[0] + "..."
+            questions.append({"id": row["id"], "headline": headline, "isReal": is_real})
+    print("Total rows in dataframe:", len(df))
+    print("Valid quiz questions found:", len(questions))
+    sample = pyrandom.sample(questions, 10) if len(questions) >= 10 else questions
+    print("Final quiz questions passed to template:", len(sample))
+    return render_template("game.html", news_data=sample)
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0', port=5001)

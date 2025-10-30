@@ -1,7 +1,3 @@
-# Fake-News-Detection-System
-FakeOff: Turn the Fake Off. Make the Fact On. Empowering AI and Digital Literacy through Play.
-
-
 # 🛡️ fakeoff - AI-Powered Fake News Detection System
 
 A comprehensive web application that uses machine learning to detect fake news articles with advanced analysis features, user management, and gamification elements.
@@ -134,15 +130,15 @@ python app.py
 # Access via: http://YOUR_IP:5001
 ```
 
-### Internet Access (using ngrok)
+### Internet Access (using Cloudflare Tunnel)
 ```bash
 # Terminal 1: Start Flask app
 python app.py
 
 # Terminal 2: Create tunnel
-ngrok http 5001
+cloudflared tunnel --url http://localhost:5001
 
-# Share the https://xxxxx.ngrok.io URL
+# Share the https://xxxxx.trycloudflare.com URL (or your custom domain if configured)
 ```
 
 ## 📊 API Endpoints
@@ -228,9 +224,24 @@ FAKE-NEWS-DETECTION/
 
 ### Common Issues
 
-1. **Database Errors**
+1. **Port Already in Use**
+   ```bash
+   # Change port in app.py
+   app.run(debug=True, host='0.0.0.0', port=5002)
+   ```
+
+2. **Model Files Missing**
+   - Application will use fallback detection
+   - Place model files in root directory
+
+3. **Database Errors**
    ```bash
    python create_users_db.py
+   ```
+
+4. **Dependencies Issues**
+   ```bash
+   pip install -r requirements.txt --upgrade
    ```
 
 ## 📈 Performance
@@ -240,9 +251,24 @@ FAKE-NEWS-DETECTION/
 - **Memory Usage:** Optimized for efficient resource usage
 - **Scalability:** Can be deployed on cloud platforms
 
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 📞 Support
+
+For support and questions:
+- Create an issue in the repository
+- Check the troubleshooting section
+- Review the documentation
 
 ## 🎉 Acknowledgments
 
