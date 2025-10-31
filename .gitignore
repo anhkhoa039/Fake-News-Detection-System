@@ -1,3 +1,9 @@
+logs/
+bert_fake_news_model/
+dataset/
+*/*.pkl
+
+src/config.json
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

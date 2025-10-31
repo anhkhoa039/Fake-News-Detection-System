@@ -8,6 +8,10 @@ import nltk
 from nltk.corpus import stopwords
 import re
 from textblob import TextBlob
+import requests
+import time
+import torch
+from transformers import BertTokenizer, BertForSequenceClassification
 try:
     from sklearn.exceptions import NotFittedError
 except Exception:
@@ -23,6 +27,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir
 TEMPLATES_DIR = os.path.join(PROJECT_ROOT, 'templates')
 STATIC_DIR = os.path.join(PROJECT_ROOT, 'static')
 MODEL_DIR = os.path.join(PROJECT_ROOT, 'model')
+BERT_MODEL_DIR = os.path.join(PROJECT_ROOT, 'bert_fake_news_model')
 
 app = Flask(__name__, template_folder=TEMPLATES_DIR, static_folder=STATIC_DIR)
 app.secret_key = "your_secret_key_here"  # Replace with a secure key
@@ -172,6 +177,55 @@ def generate_insights(prediction, confidence, sentiment, features):
 
     return insights
 
+def validate_user_input(text: str):
+    """Validate user-provided news text to reduce spam/unacceptable input.
+
+    Returns (is_valid: bool, message: Optional[str])
+    """
+    if text is None:
+        return False, "Please provide some text."
+
+    original = text
+    text = text.strip()
+    if not text:
+        return False, "Input is empty."
+
+    # Minimal content requirements
+    # if len(text) < 3:
+    #     return False, "Please provide a longer snippet (≥ 20 characters)."
+
+    # # Hard cap to avoid abuse
+    # if len(text) > 4000:
+    #     return False, "Text too long (≤ 4000 characters)."
+
+    # Basic word count
+    words = re.findall(r"[A-Za-z']+", text)
+    if len(words) < 3:
+        return False, "Please include more context (≥ 5 words)."
+
+    # Excessive repetition
+    if re.search(r"(.)\1{7,}", text):
+        return False, "Input has excessive character repetition."
+
+    # Too many links
+    url_occurrences = len(re.findall(r"https?://|www\\.", text, flags=re.IGNORECASE))
+    if url_occurrences >= 3:
+        return False, "Too many links in the input."
+
+    # Profanity / unacceptable words (basic list)
+    banned_words = {
+        'fuck', 'shit', 'bitch', 'asshole', 'bastard', 'cunt', 'nigger', 'faggot', 'slut', 'whore'
+    }
+    lowered = text.lower()
+    if any(bad in lowered for bad in banned_words):
+        return False, "Input contains unacceptable language."
+
+    # Script or HTML tags that could be dangerous in logs/templates
+    if re.search(r"<\s*script|onerror\s*=|onload\s*=", lowered):
+        return False, "HTML/script content is not allowed."
+
+    return True, None
+
 def calculate_user_score(session_history):
     """Calculate user's truth detection score"""
     if not session_history:
@@ -234,6 +288,48 @@ def highlight_keywords(text):
         text = text.replace(word, f"<mark>{word}</mark>")
         text = text.replace(word.capitalize(), f"<mark>{word.capitalize()}</mark>")
     return text
+
+# -------- BERT inference (lazy-loaded) --------
+_bert_tokenizer = None
+_bert_model = None
+
+def load_bert_model():
+    global _bert_tokenizer, _bert_model
+    if _bert_tokenizer is None or _bert_model is None:
+        if not os.path.isdir(BERT_MODEL_DIR):
+            raise FileNotFoundError(f"BERT model not found at {BERT_MODEL_DIR}")
+        _bert_tokenizer = BertTokenizer.from_pretrained(BERT_MODEL_DIR)
+        _bert_model = BertForSequenceClassification.from_pretrained(BERT_MODEL_DIR)
+        _bert_model.eval()
+    return _bert_model, _bert_tokenizer
+
+@torch.no_grad()
+def predict_news_bert(text: str):
+    model, tokenizer = load_bert_model()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True)
+    inputs = {k: v.to(device) for k, v in inputs.items()}
+    outputs = model(**inputs)
+    logits = outputs.logits
+    probs = torch.softmax(logits, dim=-1).squeeze(0).detach().cpu().tolist()
+    pred_idx = int(torch.argmax(logits, dim=-1).item())
+    prediction = "Real News" if pred_idx == 0 else "Fake News"
+    confidence = float(max(probs))
+
+    sentiment = analyze_sentiment(text)
+    sources = detect_news_source(text)
+    features = analyze_text_features(text)
+    insights = generate_insights(prediction, confidence, sentiment, features)
+
+    return {
+        'prediction': prediction,
+        'confidence': confidence,
+        'sentiment': sentiment,
+        'sources': sources,
+        'features': features,
+        'insights': insights
+    }
 
 def predict_news(text):
     # Check if model is available
@@ -307,6 +403,87 @@ def fallback_prediction(text):
         'insights': insights
     }
 
+# LLaMA (Ollama) based classifier
+
+def predict_news_llama_ollama(text, model_name: str = "llama3.2:3b", host: str = None):
+    """Classify news text using a local Ollama LLaMA model.
+
+    Returns same structure as predict_news():
+    { 'prediction': 'Real News'|'Fake News', 'confidence': float[0,1], 'sentiment': {...}, 'sources': [...], 'features': {...}, 'insights': [...] }
+    """
+    if not host:
+        host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+
+    system_prompt = (
+        "You are a strict classifier for news authenticity. "
+        "Classify the given text as either 'Real News' or 'Fake News'. "
+        "Return ONLY a compact JSON object with keys 'label' and 'confidence'. "
+        "'label' must be 'Real News' or 'Fake News'. 'confidence' must be a number between 0 and 1."
+    )
+
+    payload = {
+        "model": model_name,
+        "format": "json",  # ask Ollama to emit valid JSON
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Text to classify:\n{text}"},
+        ],
+        "stream": False,
+        "options": {"temperature": 0.2}
+    }
+
+    try:
+        resp = requests.post(f"{host}/api/chat", json=payload, timeout=45)
+        resp.raise_for_status()
+        data = resp.json()
+        content = data.get("message", {}).get("content", "{}")
+
+        # content should be JSON per format, but parse defensively
+        try:
+            parsed = json.loads(content)
+        except Exception:
+            # Some models may wrap JSON in extra text; try to extract braces
+            start = content.find("{")
+            end = content.rfind("}")
+            parsed = json.loads(content[start:end+1]) if start != -1 and end != -1 else {}
+
+        label = str(parsed.get("label", "Real News")).strip()
+        confidence = parsed.get("confidence", 0.6)
+        try:
+            confidence = float(confidence)
+        except Exception:
+            confidence = 0.6
+        confidence = max(0.0, min(1.0, confidence))
+
+        # Normalize label
+        normalized_label = label.lower()
+        if "fake" in normalized_label:
+            prediction = "Fake News"
+        elif "real" in normalized_label:
+            prediction = "Real News"
+        else:
+            # If uncertain, decide based on a simple threshold
+            prediction = "Fake News" if confidence >= 0.55 else "Real News"
+
+        # Additional analysis for consistency with the app
+        sentiment = analyze_sentiment(text)
+        sources = detect_news_source(text)
+        features = analyze_text_features(text)
+        insights = generate_insights(prediction, confidence, sentiment, features)
+        # insights.append("🧠 Classified using LLaMA via Ollama")
+
+        return {
+            'prediction': prediction,
+            'confidence': confidence,
+            'sentiment': sentiment,
+            'sources': sources,
+            'features': features,
+            'insights': insights
+        }
+    except Exception:
+        # On any failure (no server/model), gracefully fallback
+        return fallback_prediction(text)
+
 # DB check
 
 def check_user(username, password):
@@ -349,7 +526,45 @@ def home():
     if request.method == "POST":
         news_text = request.form.get("news_text")
         if news_text:
-            analysis_result = predict_news(news_text)
+            # Simple per-session cooldown (2 seconds)
+            now_ts = time.time()
+            last_ts = session.get("last_submit_ts", 0)
+            if now_ts - last_ts < 2:
+                error = "You're submitting too quickly. Please wait a moment."
+                return render_template("index.html",
+                    analysis_result=None,
+                    highlighted_text=None,
+                    history=session.get("history"),
+                    user_score=calculate_user_score(session.get("history", [])),
+                    achievements=get_user_achievements(session.get("history", [])),
+                    error=error
+                )
+
+            is_valid, error_msg = validate_user_input(news_text)
+            if not is_valid:
+                return render_template("index.html",
+                    analysis_result=None,
+                    highlighted_text=highlight_keywords(news_text or ""),
+                    history=session.get("history"),
+                    user_score=calculate_user_score(session.get("history", [])),
+                    achievements=get_user_achievements(session.get("history", [])),
+                    error=error_msg
+                )
+
+            # Route by length: <50 words → Ollama; otherwise → BERT
+            word_count = len(re.findall(r"[A-Za-z']+", news_text))
+            if word_count < 50:
+                res = predict_news_llama_ollama(news_text)
+            else:
+                res = predict_news_bert(news_text)
+            analysis_result = {
+                'prediction': res['prediction'],
+                'confidence': res['confidence'],
+                'sentiment': res['sentiment'],
+                'sources': res['sources'],
+                'features': res['features'],
+                'insights': res['insights']
+            }
             highlighted_text = highlight_keywords(news_text)
 
             session["history"].append({
@@ -362,6 +577,7 @@ def home():
             if len(session["history"]) > 10:
                 session["history"].pop(0)
             session.modified = True
+            session["last_submit_ts"] = now_ts
 
             with open(os.path.join(PROJECT_ROOT, "prediction_history.csv"), "a", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)

@@ -1,29 +1,48 @@
-from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments
+import os
+import pandas as pd
 import torch
 from sklearn.model_selection import train_test_split
+from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments
 
-# Sample dataset
-texts = [
-    "The government launched a new healthcare scheme for rural families.",
-    "India signed a trade agreement with the EU to boost exports.",
-    "NASA launched a new satellite to study climate change.",
-    "Vaccination drives have reached over 10 million children.",
-    "New education policy aims to make coding compulsory in schools.",
-    "Aliens have arrived to colonize Earth disguised as tourists.",
-    "The moon is expected to explode by next week, NASA confirms.",
-    "Scientists create immortality pills from ancient crystals.",
-    "Time travelers spotted leaving a black hole in Antarctica.",
-    "New species of dragons discovered under the Himalayan glaciers."
-]
+# Paths
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+TRAIN_CSV = os.path.join(
+    PROJECT_ROOT, "dataset", "fake_news_detection(FakeNewsNet)", "fnn_train.csv"
+)
+MODEL_DIR = os.path.join(PROJECT_ROOT, "bert_fake_news_model")
+LOG_DIR = os.path.join(PROJECT_ROOT, "logs")
 
-labels = [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]  # 0 = Real, 1 = Fake
+os.makedirs(MODEL_DIR, exist_ok=True)
+os.makedirs(LOG_DIR, exist_ok=True)
 
-# Tokenizer
+TEXT_COL = "fullText_based_content"
+LABEL_COL = "label_fnn"
+
 model_name = "bert-base-uncased"
 tokenizer = BertTokenizer.from_pretrained(model_name)
 
-# Train/test split
-train_texts, val_texts, train_labels, val_labels = train_test_split(texts, labels, test_size=0.2)
+def normalize_label(value) -> int:
+    s = str(value).strip().lower()
+    if s in {"1", "fake", "false", "f"}:
+        return 1
+    if s in {"0", "real", "true", "t"}:
+        return 0
+    try:
+        return int(float(s))
+    except Exception:
+        raise ValueError(f"Unrecognized label value: {value}")
+
+# Load and prepare data
+df = pd.read_csv(TRAIN_CSV, usecols=[TEXT_COL, LABEL_COL]).dropna()
+df[LABEL_COL] = df[LABEL_COL].apply(normalize_label).astype(int)
+
+train_texts, val_texts, train_labels, val_labels = train_test_split(
+    df[TEXT_COL].tolist(),
+    df[LABEL_COL].tolist(),
+    test_size=0.1,
+    random_state=42,
+    stratify=df[LABEL_COL].tolist()
+)
 
 train_encodings = tokenizer(train_texts, truncation=True, padding=True, return_tensors="pt")
 val_encodings = tokenizer(val_texts, truncation=True, padding=True, return_tensors="pt")
@@ -44,17 +63,20 @@ class NewsDataset(torch.utils.data.Dataset):
 train_dataset = NewsDataset(train_encodings, train_labels)
 val_dataset = NewsDataset(val_encodings, val_labels)
 
-# Model
 model = BertForSequenceClassification.from_pretrained(model_name, num_labels=2)
 
-# Compatible training arguments (no evaluation_strategy)
 training_args = TrainingArguments(
-    output_dir="./bert_fake_news_model",
-    num_train_epochs=5,
-    per_device_train_batch_size=2,
-    logging_dir="./logs",
-    logging_steps=10,
-    save_steps=1000  # prevents unnecessary checkpoint saving
+    output_dir=MODEL_DIR,
+    num_train_epochs=2,
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=8,
+    learning_rate=2e-5,
+    warmup_steps=0,
+    weight_decay=0.01,
+    logging_dir=LOG_DIR,
+    logging_steps=100,
+    save_steps=1000,
+    save_total_limit=2,
 )
 
 trainer = Trainer(
@@ -64,11 +86,9 @@ trainer = Trainer(
     eval_dataset=val_dataset,
 )
 
-# Train
 trainer.train()
 
-# Save model
-model.save_pretrained("./bert_fake_news_model")
-tokenizer.save_pretrained("./bert_fake_news_model")
+model.save_pretrained(MODEL_DIR)
+tokenizer.save_pretrained(MODEL_DIR)
 
-print("✅ Training completed and model saved to './bert_fake_news_model'")
+print("✅ Training completed and model saved to 'bert_fake_news_model'")
