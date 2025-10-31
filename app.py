@@ -8,6 +8,10 @@ import nltk
 from nltk.corpus import stopwords
 import re
 from textblob import TextBlob
+try:
+    from sklearn.exceptions import NotFittedError
+except Exception:
+    NotFittedError = Exception
 import random
 import random as pyrandom
 import json
@@ -223,7 +227,11 @@ def predict_news(text):
         return fallback_prediction(text)
     
     processed = preprocess_text(text)
-    vectorized = vectorizer.transform([processed]).toarray()
+    try:
+        vectorized = vectorizer.transform([processed]).toarray()
+    except NotFittedError:
+        # Vectorizer not fitted – use fallback to avoid crashing
+        return fallback_prediction(text)
     prediction_proba = model.predict_proba(vectorized)[0]
     predicted_class = model.predict(vectorized)[0]
     confidence_score = max(prediction_proba)
@@ -451,6 +459,10 @@ def visualization():
         correct_percent=correct_percent,
         incorrect_percent=incorrect_percent
     )
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
 
 @app.route("/history")
 def history():

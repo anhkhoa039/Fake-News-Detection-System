@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>👥 About - Fake News Detection</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; font-family: 'Poppins', sans-serif; padding: 20px; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; color: #fff; }
+        .header h1 { font-size: 2.4rem; margin: 10px 0; }
+        .nav { text-align: center; margin-bottom: 25px; }
+        .nav a { text-decoration: none; padding: 10px 16px; background: rgba(0,0,0,0.7); color: #fff; border-radius: 20px; margin: 0 6px; }
+        .card { background: rgba(255,255,255,0.95); padding: 24px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-bottom: 24px; }
+        .team { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+        .member { text-align: center; background: rgba(255,255,255,0.9); padding: 16px; border-radius: 12px; }
+        .member img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; border: 3px solid #eaeaea; }
+        .member h4 { margin: 6px 0 2px; }
+        .member p { margin: 0; color: #666; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1><i class="fas fa-users"></i> About Fake News Detection</h1>
+        <p>Learn about our vision and the team behind it.</p>
+    </div>
+
+    <div class="nav">
+        <a href="{{ url_for('home') }}"><i class="fas fa-home"></i> Home</a>
+        <a href="{{ url_for('visualization') }}"><i class="fas fa-chart-bar"></i> Analytics</a>
+        <a href="{{ url_for('game') }}"><i class="fas fa-gamepad"></i> Game</a>
+        <a href="{{ url_for('history') }}"><i class="fas fa-history"></i> History</a>
+    </div>
+
+    <div class="card">
+        <h3><i class="fas fa-info-circle"></i> What is FakeOff?</h3>
+        <p style="margin-top:10px; line-height:1.7; color:#333;">
+            FakeOff is our initiative to combat misinformation by leveraging AI-driven
+            analysis to evaluate the credibility of news content. This project provides
+            real-time assessments, confidence scoring, sentiment insights, and more to help
+            readers make informed decisions. The current application, "Fake News Detection",
+            is powered by our FakeOff research and tooling.
+        </p>
+    </div>
+
+    <div class="card">
+        <h3><i class="fas fa-people-group"></i> Our Team</h3>
+        <div class="team" style="margin-top:14px;">
+            <div class="member">
+                <img src="https://via.placeholder.com/150" alt="Team Member 1">
+                <h4>Ryan</h4>
+                <!-- <p>Lead Researcher</p> -->
+            </div>
+            <div class="member">
+                <img src="static/kane2.png" alt="Team Member 2">
+                <h4>Kane</h4>
+                <!-- <p>Machine Learning Engineer</p> -->
+            </div>
+            <div class="member">
+                <img src="static/Jerome.jpg" alt="Team Member 3">
+                <h4>Jerome</h4>
+                <!-- <p>Backend Developer</p> -->
+            </div>
+            <div class="member">
+                <img src="static/Phillip.jpg" alt="Team Member 4">
+                <h4>Phillip</h4>
+                <!-- <p>Frontend Engineer</p> -->
+            </div>
+            <div class="member">
+                <img src="static/Fu.jpg" alt="Team Member 5">
+                <h4>Fu</h4>
+                <!-- <p>Data Scientist</p> -->
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

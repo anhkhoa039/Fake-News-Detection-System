@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>🔍 fakeoff - AI-Powered Fake News Detection</title>
+    <title>🔍 Fake News Detection - AI-Powered Fake News Detection</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -333,7 +333,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1><i class="fas fa-shield-alt"></i> fakeoff</h1>
+            <h1><i class="fas fa-shield-alt"></i> Fake News Detection</h1>
             <p>AI-Powered Fake News Detection System</p>
         </div>
 
@@ -342,6 +342,7 @@
             <a href="{{ url_for('history') }}" class="{% if request.endpoint == 'history' %}active{% endif %}"><i class="fas fa-history"></i> History</a>
             <a href="{{ url_for('visualization') }}" class="{% if request.endpoint == 'visualization' %}active{% endif %}"><i class="fas fa-chart-bar"></i> Analytics</a>
             <a href="{{ url_for('game') }}" class="{% if request.endpoint == 'game' %}active{% endif %}"><i class="fas fa-gamepad"></i> Game Mode</a>
+            <a href="{{ url_for('about') }}" class="{% if request.endpoint == 'about' %}active{% endif %}"><i class="fas fa-users"></i> About</a>
             {% if session.get('role') == 'admin' %}
                 <a href="{{ url_for('admin') }}" class="{% if request.endpoint == 'admin' %}active{% endif %}"><i class="fas fa-cog"></i> Dashboard</a>
             {% endif %}

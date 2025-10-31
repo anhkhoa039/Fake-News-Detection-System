@@ -1,4 +1,4 @@
-# 🛡️ fakeoff - AI-Powered Fake News Detection System
+# 🛡️ Fake News Detection - AI-Powered Fake News Detection System
 
 A comprehensive web application that uses machine learning to detect fake news articles with advanced analysis features, user management, and gamification elements.
 
