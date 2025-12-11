@@ -263,13 +263,6 @@ FAKE-NEWS-DETECTION/
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 📞 Support
-
-For support and questions:
-- Create an issue in the repository
-- Check the troubleshooting section
-- Review the documentation
-
 ## 🎉 Acknowledgments
 
 - Flask community for the excellent web framework
