@@ -1,6 +1,7 @@
 # 🛡️ Fake News Detection - AI-Powered Fake News Detection System
 
 A comprehensive web application that uses machine learning to detect fake news articles with advanced analysis features, user management, and gamification elements.
+[![Watch the video](https://img.youtube.com/vi/9ETlTDhXUEk/maxresdefault.jpg)](https://www.youtube.com/watch?v=9ETlTDhXUEk)
 
 ## 🌟 Features
 
